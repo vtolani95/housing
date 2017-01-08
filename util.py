@@ -1,11 +1,48 @@
 import numpy as np
 import pdb
+import csv
 
 def one_hot(num_classes, index):
   result = np.zeros(num_classes)
   if (index < 0): return result
   result[index] = 1.0
   return result
+
+def ms_sub_class(features, row):
+  options = {
+  "20" : 1,
+  "30" : 2,
+  "40" : 3,
+  "45" : 4,
+  "50" : 5,
+  "60" : 6,
+  "70" : 7,
+  "75" : 8,
+  "80" : 9,
+  "85" : 10,
+  "90" : 11,
+  "120" : 12,
+  "150" : 13,
+  "160" : 14,
+  "180" : 15,
+  "190" : 16
+  }
+  features.extend(one_hot(len(options), options[row[1]]-1))
+
+def ms_zoning(features, row):
+  options = {
+  "A" : 1,
+  "C" : 2,
+  "FV" : 3,
+  "I" : 4,
+  "RH" : 5,
+  "RL" : 6,
+  "RP" : 7,
+  "RM" : 8,
+  "C (all)": 2,
+  "NA": 0
+  }
+  features.extend(one_hot(len(options)-2, options[row[2]]-1))
 
 def lot_frontage(features, row):
   if row[3] == 'NA':
@@ -56,7 +93,7 @@ def land_contour(features, row):
   else:
     raise Exception('Invalid Land Contour')
 
-def utilities(features, row):
+def ties(features, row):
   if row[9] == 'AllPub':
     features.extend([1, 0, 0, 0])
   elif row[9] == 'NoSewr':
@@ -68,7 +105,7 @@ def utilities(features, row):
   elif row[9] == 'NA':
     features.extend([0, 0, 0, 0])
   else:
-    raise Exception('Invalid utilities')
+    raise Exception('Invalid ties')
 
 def lot_config(features, row):
   if row[10] == 'Inside':
@@ -173,8 +210,12 @@ def overall_qual(features, row):
 def overall_cond(features, row):
   features.append(float(row[18]))
 
-### year built
-### year remod added
+def year_built(features, row):
+  features.append(float(row[19]))
+
+def year_remod(features, row):
+  features.append(float(row[20]))
+
 def roof_style(features, row):
   styles = {
   "Flat" : 1,
@@ -310,7 +351,48 @@ def basement_exposure(features, row):
   "NA": 0
   }
   features.extend(one_hot(len(exposures)-2, exposures[row[32]]-1))
-## basement finish stuff
+
+def basement_fin_1(features, row):
+  options = {
+  "GLQ" : 1,
+  "ALQ" : 2,
+  "BLQ" : 3,
+  "Rec" : 4,
+  "LwQ" : 5,
+  "Unf" : 6,
+  "NA" : 0
+  }
+  features.extend(one_hot(len(options)-1, options[row[33]]-1))
+
+def basement_1_sf(features, row):
+  if row[34] == 'NA':
+    features.append(0.0)
+  else:
+    features.append(float(row[34]))
+
+def basement_fin_2(features, row):
+  options = {
+  "GLQ" : 1,
+  "ALQ" : 2,
+  "BLQ" : 3,
+  "Rec" : 4,
+  "LwQ" : 5,
+  "Unf" : 6,
+  "NA" : 0
+  }
+  features.extend(one_hot(len(options)-1, options[row[35]]-1))
+
+def basement_2_sf(features, row):
+  if row[36] == 'NA':
+    features.append(0.0)
+  else:
+    features.append(float(row[36]))
+
+def basement_unfn_sf(features, row):
+  if row[37] == 'NA':
+    features.append(0.0)
+  else:
+    features.append(float(row[37]))
 
 def basement_total_sq_ft(features, row):
   if row[38] == "NA":
@@ -359,7 +441,11 @@ def electrical_system(features, row):
   }
   features.extend(one_hot(len(options)-1, options[row[42]]-1))
 
-### 1st and second floor square feet
+def first_floor_sq_ft(features, row):
+  features.append(float(row[43]))
+
+def second_floor_sq_ft(features, row):
+  features.append(float(row[43]))
 
 def low_quality_fin_sf(features, row):
   features.append(float(row[45]))
@@ -464,7 +550,11 @@ def garage_type(features, row):
   }
   features.extend(one_hot(len(options)-1, options[row[58]]-1))
 
-### garage year built
+def garage_yr_built(features, row):
+  if row[59] == 'NA':
+    features.append(0.0)
+  else:
+    features.append(float(row[59]))
 
 def garage_finish(features, row):
   options = {
@@ -556,7 +646,16 @@ def fence_quality(features, row):
   }
   features.extend(one_hot(len(qualities), qualities[row[73]]-1))
 
-### misc feature
+def misc_feature(features, row):
+  options = {
+  "Elev" : 1,
+  "Gar2" : 2,
+  "Othr" : 3,
+  "Shed" : 4,
+  "TenC" : 5,
+  "NA" : 0
+  }
+  features.extend(one_hot(len(options)-1, options[row[74]]-1))
 
 def misc_val(features, row):
   if row[75] == "NA":
@@ -564,8 +663,12 @@ def misc_val(features, row):
   else:
     features.append(float(row[75]))
 
-## month sold
-## year sold
+def month_sold(features, row):
+  features.append(float(row[76]))
+
+def year_sold(features, row):
+  features.append(float(row[77]))
+
 def sale_type(features, row):
   options = {
   "WD" : 1,
@@ -592,6 +695,111 @@ def sale_condition(features, row):
   "Partial" : 6
   }
   features.extend(one_hot(len(options), options[row[79]]-1))
+
+
+def load_data(filename, train=True):
+  with open(filename, newline='') as csvfile:
+    x = []
+    y = []
+    reader = csv.reader(csvfile)
+    flag = 0
+    for row in reader:
+      if flag == 0:
+        flag = 1
+        continue
+      if row[0] == '524' or row[0] == '1299': #outliers
+        continue
+      if train:
+        y.append(np.log(float(row[-1])))
+      else:
+        y.append(int(row[0]))
+      features = []
+      ms_sub_class(features, row)
+      ms_zoning(features, row)
+      lot_frontage(features, row)
+      lot_area(features, row)
+      street(features, row)
+      alley(features, row)
+      lot_shape(features, row)
+      land_contour(features, row)
+      ties(features, row)
+      lot_config(features, row)
+      land_slope(features, row)
+      neighborhood(features, row)
+      condition(features, row)
+      building_type(features, row)
+      house_style(features, row)
+      overall_qual(features, row)
+      overall_cond(features, row)
+      year_built(features, row)
+      year_remod(features, row)
+      roof_style(features, row)
+      roof_material(features, row)
+      exterior_covering(features, row)
+      mas_vnr_type(features, row)
+      mas_vnr_area(features, row) #
+      exterior_qual(features, row)
+      exterior_cond(features, row)
+      foundation(features, row)
+      basement_qual(features, row)
+      basement_cond(features, row)
+      basement_exposure(features, row)
+      basement_fin_1(features, row)
+      basement_1_sf(features, row) #
+      basement_fin_2(features, row)
+      basement_2_sf(features, row) #
+      basement_unfn_sf(features, row)
+      basement_total_sq_ft(features, row)
+      heating(features, row)
+      heating_qc(features, row) #
+      central_air(features, row)
+      electrical_system(features, row)
+      first_floor_sq_ft(features, row)
+      second_floor_sq_ft(features, row) #
+      low_quality_fin_sf(features, row) #
+      gr_live_area(features, row)
+      bsmnt_full_bath(features, row)
+      bsmnt_half_bath(features, row) #
+      full_bath(features, row)
+      half_bath(features, row)
+      bedroom_abv_grd(features, row)
+      kitchen_abv_grd(features, row)
+      kitchen_quality(features, row)
+      total_rooms_abv_grd(features, row)
+      functionality(features, row)
+      fireplaces(features, row)
+      fireplace_quality(features, row)
+      garage_type(features, row)
+      garage_yr_built(features, row)
+      garage_finish(features, row)
+      garage_cars(features, row)
+      garage_area(features, row)
+      garage_quality(features, row)
+      garage_cond(features, row)
+      paved_driveway(features, row)
+      wood_deck_area(features, row)
+      open_porch_sf(features, row) #
+      encolosed_porch(features, row)
+      three_season_porch(features, row)
+      screen_porch(features, row)
+      pool_area(features, row)
+      pool_quality(features, row)
+      fence_quality(features, row)
+      misc_feature(features, row)
+      misc_val(features, row)
+      month_sold(features, row) #
+      year_sold(features, row) #
+      sale_type(features, row)
+      sale_condition(features, row)
+
+      x.append(features)
+  return np.array(x), np.array(y)
+
+def write_csv(filename, id, pred):
+  c = csv.writer(open(filename, "wt"))
+  c.writerow(['Id', 'SalePrice'])
+  for i in range(len(pred)):
+    c.writerow((id[i], pred[i]))
 
 
 
